@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../components/API_BASE_URL';
 
 function RegisterUser() {
 
@@ -18,7 +19,7 @@ function RegisterUser() {
         setLoading(true);
 
         try {
-            const response = await fetch("https://3.135.189.191:5002/user/register", {
+            const response = await fetch(`${API_BASE_URL}/user/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

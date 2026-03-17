@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../components/API_BASE_URL';
 
 function LoginUser() {
   const navigate = useNavigate()
@@ -19,7 +20,7 @@ function LoginUser() {
 
     try {
 
-      const response = await fetch("https://3.135.189.191:5002/user/login", {
+      const response = await fetch(`${API_BASE_URL}/user/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

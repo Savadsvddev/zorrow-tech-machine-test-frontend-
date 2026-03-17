@@ -1,449 +1,495 @@
-import axios from 'axios';
-import React, { useState, useRef, useEffect } from 'react'
+import axios from "axios";
+import React, { useState, useRef, useEffect } from "react";
+import { API_BASE_URL } from "../components/API_BASE_URL";
+import axiosInstance from "../components/utils/AxiosInstance";
 
 function Dashboard() {
+
   const [location, setLocation] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [image, setImage] = useState(null);
+  const [error, setError] = useState("");
   const [stream, setStream] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [image, setImage] = useState(null);
+
+  const [checkInPopup, setCheckInPopup] = useState(false);
+  const [checkOutPopup, setCheckOutPopup] = useState(false);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const [checkInPopup, setCheckInPopup] = useState(false)
-  const [checkOutPopup, setCheckOutPopup] = useState(false)
+  const user = JSON.parse(localStorage.getItem("data") || "{}");
 
-  const data = JSON.parse(localStorage.getItem("data"));
+  // Add debugging for user data
+  console.log("Full user data from localStorage:", user);
+  console.log("User ID:", user?.data?._id);
+  console.log("Token:", user?.token ? "Present" : "Missing");
+
+  /* -------------------- LOCATION -------------------- */
+
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
 
   const getCurrentLocation = () => {
-    setLoading(true);
-    setError(null);
 
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      setLoading(false);
+      setError("Geolocation not supported");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const currentLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        };
+    navigator.geolocation.getCurrentPosition((pos) => {
 
-        // Calculate distance from specified location
-        const distance = calculateDistance(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          9.9312, // target latitude
-          76.2673  // target longitude
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
 
-        );
+      const distance = calculateDistance(
+        lat,
+        lon,
+        9.9312, // target latitude
+        76.2673 // target longitude
+      );
 
-        setLocation({
-          ...currentLocation,
-          distance: distance
-        });
-        setLoading(false);
-      },
-      (error) => {
-        setError('Unable to retrieve your location');
-        setLoading(false);
-      }
-    );
+      setLocation({
+        latitude: lat,
+        longitude: lon,
+        accuracy: pos.coords.accuracy,
+        distance: distance
+      });
+
+    }, () => {
+      setError("Unable to get location");
+    });
+
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371000; // Earth's radius in meters
+
+    const R = 6371000;
+
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
+
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    return distance;
+
+    return R * c;
   };
 
-  // Start camera using getUserMedia
+  /* -------------------- CAMERA -------------------- */
+
   const startCamera = async () => {
+
     try {
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: { facingMode: "environment" },
         audio: false
       });
 
       setStream(mediaStream);
       setCameraActive(true);
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
     } catch (err) {
-      console.error('Error accessing camera:', err);
-      setError('Unable to access camera. Please ensure camera permissions are granted.');
+
+      setError("Camera permission denied");
+      console.error(err);
+
     }
   };
 
-  // Stop camera
+  useEffect(() => {
+
+    if (cameraActive && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+
+  }, [cameraActive, stream]);
+
   const stopCamera = () => {
+
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setCameraActive(false);
     }
+
+    setCameraActive(false);
+    setStream(null);
+
   };
 
-  // Capture photo from video stream
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (!video || !canvas) return;
 
-      const imageData = canvas.toDataURL('image/jpeg');
-      setImage(imageData);
-      stopCamera();
-    }
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], `attendance-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+      });
+
+      setImage(file);
+    }, "image/jpeg");
+
+    stopCamera();
   };
 
-  // Cleanup camera on component unmount
   useEffect(() => {
-    return () => {
-      stopCamera();
-    };
+
+    return () => stopCamera();
+
   }, []);
 
-  // Auto-get location when component mounts
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
+  /* -------------------- SUBMIT -------------------- */
 
-  const takeImage = () => {
-    startCamera();
-  };
 
-  const handleSubmitCheckIn = async () => {
+  // const handleCheckIn = async () => {
+
+  //   try {
+
+  //     // Check if user data exists
+  //     if (!user || !user.data || !user.data._id) {
+  //       alert('User data not found. Please login again.');
+  //       return;
+  //     }
+
+  //     // Check if location data exists
+  //     if (!location || !location.latitude || !location.longitude) {
+  //       alert('Location data not available. Please enable location services.');
+  //       return;
+  //     }
+
+  //     // Log the data being sent
+  //     console.log('Check-in data:', {
+  //       user_id: user.data._id,
+  //       latitude: location.latitude,
+  //       longitude: location.longitude,
+  //       image: image ? 'Image data present' : 'No image'
+  //     });
+
+  //     console.log('Authorization token:', user.token ? 'Token present' : 'No token');
+
+
+
+  //     const response = await axios.post(
+  //       `${API_BASE_URL}/attendance/checkin`,
+  //       {
+  //         user_id: user.data._id,
+  //         latitude: location.latitude,
+  //         longitude: location.longitude,
+  //         image
+  //       },
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${user.token}`
+  //         }
+  //       }
+  //     );
+
+  //     console.log('Check-in response:', response);
+
+  //     alert("Check-In Successful");
+
+  //     setImage(null);
+  //     setCheckInPopup(false);
+
+  //   } catch (err) {
+
+  //     console.error('Check-in error details:', {
+  //       message: err.message,
+  //       response: err.response?.data,
+  //       status: err.response?.status,
+  //       statusText: err.response?.statusText
+  //     });
+
+  //     // Handle specific upload errors
+  //     if (err.response?.data?.message?.includes('ENOENT') && err.response?.data?.message?.includes('uploads')) {
+  //       alert('Server upload directory issue. Please contact administrator to create uploads folder.');
+  //     } else if (err.response?.data?.message?.includes('ENOENT')) {
+  //       alert('File system error on server. Please contact administrator.');
+  //     } else {
+  //       alert(`Check-in failed: ${err.response?.data?.message || err.message}`);
+  //     }
+
+  //   }
+
+  // };
+  const handleCheckIn = async () => {
+
     try {
-      const payload = {
-        user_id: data.data._id,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        // image: image
-      };
 
-      const res = await axios.post(
-        "https://3.135.189.191:5002/attendance/checkin",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${data.token}`
-          },
-          httpsAgent: new https.Agent({
-            rejectUnauthorized: false
-          })
-        }
+      // Check if user data exists
+      if (!user || !user.data || !user.data._id) {
+        alert('User data not found. Please login again.');
+        return;
+      }
+
+      // Check if location data exists
+      if (!location || !location.latitude || !location.longitude) {
+        alert('Location data not available. Please enable location services.');
+        return;
+      }
+
+      const formData = new FormData();
+
+      formData.append("user_id", user.data._id);
+      formData.append("latitude", location.latitude);
+      formData.append("longitude", location.longitude);
+      formData.append("image", image);
+
+
+
+
+      const response = await axiosInstance.post(
+        `/attendance/checkin`,
+        formData,
+
       );
 
-      console.log(res.data);
+      console.log('Check-in response:', response);
 
+      alert("Check-In Successful");
+
+      setImage(null);
       setCheckInPopup(false);
-      setImage(null);
 
     } catch (err) {
-      console.error(err);
-    }
-  };
-  const handleSubmitCheckOut = async () => {
-    try {
-      const payload = {
-        user_id: data.data._id,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        image: image
-      };
 
-      const res = await axios.post(
-        "https://3.135.189.191:5002/attendance/checkout",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${data.token}`
-          }
-        }
+      console.error('Check-in error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
+      });
+
+      // Handle specific upload errors
+      if (err.response?.data?.message?.includes('ENOENT') && err.response?.data?.message?.includes('uploads')) {
+        alert('Server upload directory issue. Please contact administrator to create uploads folder.');
+      } else if (err.response?.data?.message?.includes('ENOENT')) {
+        alert('File system error on server. Please contact administrator.');
+      } else {
+        alert(`Check-in failed: ${err.response?.data?.message || err.message}`);
+      }
+
+    }
+
+  };
+
+
+
+
+  const handleCheckOut = async () => {
+
+    try {
+      const formData = new FormData();
+
+      formData.append("user_id", user.data._id);
+      formData.append("latitude", location.latitude);
+      formData.append("longitude", location.longitude);
+      formData.append("image", image);
+
+
+      const response = await axiosInstance.post(
+        `/attendance/checkout`,
+        formData,
       );
 
-      console.log(res.data);
+      console.log('Check-out response:', response.data);
 
-      setCheckOutPopup(false);
+      alert("Check-Out Successful");
+
       setImage(null);
+      setCheckOutPopup(false);
 
     } catch (err) {
-      console.error(err);
+
+      console.error('Check-out error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
+      });
+
+      alert(`Check-out failed: ${err.response?.data?.message || err.message}`);
+
     }
+
   };
 
-  const isNearShop = location && location.distance > 100;
+  const isNearShop = location && location.distance >= 100;
 
-  // console.log(data.token)
-  // console.log(location.latitude, "location")
-  console.log(location)
+  /* -------------------- UI -------------------- */
+
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center min-h-full">
-      <div className='text-center space-y-6 p-6'>
-        {/* <h1 className='text-3xl lg:text-4xl font-bold text-gray-800'>Dashboard</h1> */}
+
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+
+      {location && (
+
+        <div className="p-6 bg-white shadow rounded">
+          <h2 className="font-bold">Your Location</h2>
+
+          <p>Latitude : {location.latitude}</p>
+          <p>Longitude : {location.longitude}</p>
 
 
-        {error && (
-          <div className='p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg'>
-            {error}
-          </div>
-        )}
+        </div>
 
-        {location && (
-          <div className='p-6 bg-white rounded-lg shadow-md max-w-md mx-auto space-y-3'>
-            <h2 className='text-xl font-semibold text-gray-800'>Your Location</h2>
-            <div className='text-left space-y-2'>
-              <p className='text-sm text-gray-600'>
-                <span className='font-medium'>Latitude:</span> {location.latitude.toFixed(6)}
-              </p>
-              <p className='text-sm text-gray-600'>
-                <span className='font-medium'>Longitude:</span> {location.longitude.toFixed(6)}
-              </p>
-              <p className='text-sm text-gray-600'>
-                <span className='font-medium'>Accuracy:</span> ±{location.accuracy.toFixed(0)} meters
-              </p>
-              <div className='pt-2 mt-2 border-t border-gray-200'>
-                <p className='text-sm font-medium text-gray-700'>
-                  {/* Distance from Shop (11.76°N, 73.00°E): */}
-                  Distance from the shop
-                </p>
-                <p className='text-lg font-bold text-blue-600'>
-                  {location.distance ? `${location.distance.toFixed(0)} meters` : 'Calculating...'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-6">
-        {!isNearShop && (
-          <p className="bg-red-200 px-3">
-            Distance is more than 100m, you cannot check in
-          </p>
-        )}
 
-        {isNearShop && (
-          <>
-            <button
-              className="bg-red-600 py-3 px-6 text-white rounded"
-              onClick={() => setCheckInPopup(true)}
-            >
-              Check In
-            </button>
+      )}
+      {location && (
 
-            <button
-              className="bg-yellow-600 py-3 px-6 text-white rounded"
-              onClick={() => setCheckOutPopup(true)}
-            >
-              Check Out
-            </button>
-          </>
-        )}
-      </div>
-      {checkOutPopup && (
+        <div className="p-6 bg-white shadow rounded">
+          <h2 className="font-bold">Distance from Shop</h2>
+
+
+          <p className="text-red-500 text-sm font-bold"> {location.distance.toFixed(0)} m</p>
+
+        </div>
+
+
+      )}
+
+      {!isNearShop && (
+        <p className="bg-red-200 px-4 py-2 rounded">
+          You must be within 100 meters
+        </p>
+      )}
+
+      {isNearShop && (
+
+        <div className="flex gap-4">
+
+          <button
+            onClick={() => setCheckInPopup(true)}
+            className="bg-green-600 text-white px-6 py-2 rounded cursor-pointer"
+          >
+            Check In
+          </button>
+
+          <button
+            onClick={() => setCheckOutPopup(true)}
+            className="bg-yellow-600 text-white px-6 py-2 rounded cursor-pointer"
+          >
+            Check Out
+          </button>
+
+        </div>
+
+      )}
+
+      {(checkInPopup || checkOutPopup) && (
+
         <div className="fixed inset-0 flex items-center justify-center bg-black/50">
 
-          <div className="w-96 p-6 bg-white rounded-xl shadow-lg">
+          <div className="bg-white p-6 rounded w-96">
+
             {!cameraActive && !image && (
               <>
                 <button
-                  onClick={takeImage}
-                  className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 mb-4"
+                  onClick={startCamera}
+                  className="w-full bg-green-600 text-white py-2 rounded cursor-pointer"
                 >
-                  Take image
+                  Take Image
                 </button>
-
-                <button className='bg-red-300 py-2 px-4 rounded' onClick={() => setCheckOutPopup(false)}>Back</button>
+                <button className="bg-gray-600 text-white px-6 py-2 mt-5 rounded cursor-pointer" onClick={() => { setCheckInPopup(false), setCheckOutPopup(false) }}> Back</button>
               </>
+
             )}
 
-            {/* Camera View */}
             {cameraActive && (
-              <div className="mb-4">
+
+              <div>
+
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  className="w-full h-48 object-cover rounded-lg bg-black"
+                  muted
+                  className="w-full h-48 bg-black rounded"
                 />
+
                 <div className="flex gap-2 mt-2">
+
                   <button
                     onClick={capturePhoto}
-                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                    className="flex-1 bg-blue-600 text-white py-2 rounded"
                   >
                     Capture
                   </button>
+
                   <button
                     onClick={stopCamera}
-                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    className="flex-1 bg-red-600 text-white py-2 rounded"
                   >
                     Cancel
                   </button>
+
                 </div>
+
               </div>
+
             )}
 
-            {/* Captured Image Preview */}
             {image && (
-              <div className="mb-4">
+
+              <div>
+
                 <img
-                  src={image}
+                  src={URL.createObjectURL(image)}
                   alt="captured"
-                  className="w-full h-48 object-cover rounded-lg bg-gray-100"
+                  className="w-full h-48 object-cover rounded"
                 />
-                <button
-                  onClick={() => {
-                    setImage(null);
-                    takeImage();
-                  }}
-                  className="w-full mt-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                >
-                  Retake
-                </button>
+
+                <div className="flex gap-2 mt-3">
+
+                  <button
+                    onClick={() => setImage(null)}
+                    className="flex-1 bg-gray-400 text-white py-2 rounded"
+                  >
+                    Retake
+                  </button>
+
+                  <button
+                    onClick={
+                      checkInPopup ? handleCheckIn : handleCheckOut
+                    }
+                    className="flex-1 bg-green-600 text-white py-2 rounded"
+                  >
+                    Submit
+                  </button>
+
+                </div>
+
               </div>
+
             )}
 
-            {/* Hidden Canvas for Photo Capture */}
-            <canvas ref={canvasRef} className="hidden" />
+            <canvas ref={canvasRef} className="hidden"></canvas>
 
-            {/* Buttons */}
-            {image && (
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setCheckOutPopup(false);
-                    setImage(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={handleSubmitCheckOut}
-                  className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
-                >
-                  Submit
-                </button>
-              </div>
-            )}
           </div>
 
         </div>
+
       )}
-      {checkInPopup && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
 
-          <div className="w-96 p-6 bg-white rounded-xl shadow-lg">
-            {!cameraActive && !image && (
-              <>
-                <button
-                  onClick={takeImage}
-                  className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 mb-4"
-                >
-                  Take image
-                </button>
-
-                <button className='bg-red-300 py-2 px-4 rounded' onClick={() => setCheckInPopup(false)}>Back</button>
-              </>
-            )}
-
-            {/* Camera View */}
-            {cameraActive && (
-              <div className="mb-4">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-48 object-cover rounded-lg bg-black"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={capturePhoto}
-                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    Capture
-                  </button>
-                  <button
-                    onClick={stopCamera}
-                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Captured Image Preview */}
-            {image && (
-              <div className="mb-4">
-                <img
-                  src={image}
-                  alt="captured"
-                  className="w-full h-48 object-cover rounded-lg bg-gray-100"
-                />
-                <button
-                  onClick={() => {
-                    setImage(null);
-                    takeImage();
-                  }}
-                  className="w-full mt-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                >
-                  Retake
-                </button>
-              </div>
-            )}
-
-            {/* Hidden Canvas for Photo Capture */}
-            <canvas ref={canvasRef} className="hidden" />
-
-            {/* Buttons */}
-            {image && (
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setCheckInPopup(false);
-                    setImage(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={handleSubmitCheckIn}
-                  className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
-                >
-                  Submit
-                </button>
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
     </div>
-  )
+
+  );
+
 }
 
-export default Dashboard
+export default Dashboard;
