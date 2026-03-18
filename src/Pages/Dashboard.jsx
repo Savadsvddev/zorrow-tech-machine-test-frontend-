@@ -45,8 +45,10 @@ function Dashboard() {
       const distance = calculateDistance(
         lat,
         lon,
-        9.9312, // target latitude
-        76.2673 // target longitude
+        // 9.9312, // target latitude
+        // 76.2673 // target longitude
+        10.9233,
+        75.9407
       );
 
       setLocation({
@@ -328,7 +330,7 @@ function Dashboard() {
 
   };
 
-  const isNearShop = location && location.distance >= 100;
+  const isNearShop = location && location.distance <= 100;
 
   /* -------------------- UI -------------------- */
 

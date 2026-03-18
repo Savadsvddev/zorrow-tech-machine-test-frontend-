@@ -94,7 +94,7 @@ function LoginUser() {
               />
             </div>
 
-            Password Field
+            
             <div className='mt-4'>
               <label htmlFor='password' className='block text-sm font-medium text-gray-700 mb-2'>
                 Password

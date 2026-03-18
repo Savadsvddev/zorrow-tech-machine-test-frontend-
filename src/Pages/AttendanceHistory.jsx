@@ -25,7 +25,6 @@ const AttendacneHistory = () => {
         }
     };
 
-    // Group attendance records by date and separate check-in/check-out
     const groupByDate = (records) => {
         const grouped = {};
 
@@ -135,8 +134,7 @@ const AttendacneHistory = () => {
                                             src={item.checkinImage}
                                             alt="checkin"
                                             className="w-12 h-12 rounded object-cover cursor-pointer hover:ring-2 hover:ring-green-400 transition-all"
-                                            onClick={() => window.open(item.checkinImage, '_blank')}
-                                            title="Click to view check-in photo"
+                                            
                                         />
                                     ) : (
                                         <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center">
@@ -153,8 +151,8 @@ const AttendacneHistory = () => {
                                             src={item.checkoutImage}
                                             alt="checkout"
                                             className="w-12 h-12 rounded object-cover cursor-pointer hover:ring-2 hover:ring-yellow-400 transition-all"
-                                            onClick={() => window.open(item.checkoutImage, '_blank')}
-                                            title="Click to view check-out photo"
+                                            // onClick={() => window.open(item.checkoutImage, '_blank')}
+                                            // title="Click to view check-out photo"
                                         />
                                     ) : (
                                         <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center">
