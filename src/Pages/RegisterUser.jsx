@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../components/API_BASE_URL';
+import { toast } from 'react-toastify';
 
 function RegisterUser() {
 
@@ -30,7 +31,7 @@ function RegisterUser() {
             const data = await response.json();
 
             if (data.success) {
-                alert("User registered successfully");
+                toast.success("User registered successfully");
 
                 setFormData({
                     name: '',
@@ -39,18 +40,18 @@ function RegisterUser() {
 
                 navigate("/login-user");
             } else {
-                setError(data.message);
+                toast.error(data.message);
             }
 
         } catch (error) {
             console.error('Registration error:', error);
             
             if (error.name === 'TypeError' && error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
-                setError('SSL certificate error. Please try again or contact support.');
+                toast.error('SSL certificate error. Please try again or contact support.');
             } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                setError('Unable to connect to server. Please check your internet connection and try again.');
+                toast.error('Unable to connect to server. Please check your internet connection and try again.');
             } else {
-                setError('Registration failed: ' + (error.message || 'Unknown error'));
+                toast.error('Registration failed: ' + (error.message || 'Unknown error'));
             }
         }
 

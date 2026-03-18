@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../components/API_BASE_URL';
+import { toast } from 'react-toastify';
 
 function LoginUser() {
   const navigate = useNavigate()
@@ -35,15 +36,14 @@ function LoginUser() {
 
       if (data.success) {
 
-        // save token
         localStorage.setItem("data", JSON.stringify(data));
 
-        alert("Login successful");
+        toast.success("Login successful");
 
         navigate("/");
 
       } else {
-        setError(data.message);
+        toast.error(data.message);
       }
 
     } catch (err) {

@@ -1,7 +1,6 @@
-import axios from "axios";
 import React, { useState, useRef, useEffect } from "react";
-import { API_BASE_URL } from "../components/API_BASE_URL";
 import axiosInstance from "../components/utils/AxiosInstance";
+import { toast } from "react-toastify";
 
 function Dashboard() {
 
@@ -19,7 +18,6 @@ function Dashboard() {
 
   const user = JSON.parse(localStorage.getItem("data") || "{}");
 
-  // Add debugging for user data
   console.log("Full user data from localStorage:", user);
   console.log("User ID:", user?.data?._id);
   console.log("Token:", user?.token ? "Present" : "Missing");
@@ -154,93 +152,18 @@ function Dashboard() {
 
   }, []);
 
-  /* -------------------- SUBMIT -------------------- */
 
-
-  // const handleCheckIn = async () => {
-
-  //   try {
-
-  //     // Check if user data exists
-  //     if (!user || !user.data || !user.data._id) {
-  //       alert('User data not found. Please login again.');
-  //       return;
-  //     }
-
-  //     // Check if location data exists
-  //     if (!location || !location.latitude || !location.longitude) {
-  //       alert('Location data not available. Please enable location services.');
-  //       return;
-  //     }
-
-  //     // Log the data being sent
-  //     console.log('Check-in data:', {
-  //       user_id: user.data._id,
-  //       latitude: location.latitude,
-  //       longitude: location.longitude,
-  //       image: image ? 'Image data present' : 'No image'
-  //     });
-
-  //     console.log('Authorization token:', user.token ? 'Token present' : 'No token');
-
-
-
-  //     const response = await axios.post(
-  //       `${API_BASE_URL}/attendance/checkin`,
-  //       {
-  //         user_id: user.data._id,
-  //         latitude: location.latitude,
-  //         longitude: location.longitude,
-  //         image
-  //       },
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${user.token}`
-  //         }
-  //       }
-  //     );
-
-  //     console.log('Check-in response:', response);
-
-  //     alert("Check-In Successful");
-
-  //     setImage(null);
-  //     setCheckInPopup(false);
-
-  //   } catch (err) {
-
-  //     console.error('Check-in error details:', {
-  //       message: err.message,
-  //       response: err.response?.data,
-  //       status: err.response?.status,
-  //       statusText: err.response?.statusText
-  //     });
-
-  //     // Handle specific upload errors
-  //     if (err.response?.data?.message?.includes('ENOENT') && err.response?.data?.message?.includes('uploads')) {
-  //       alert('Server upload directory issue. Please contact administrator to create uploads folder.');
-  //     } else if (err.response?.data?.message?.includes('ENOENT')) {
-  //       alert('File system error on server. Please contact administrator.');
-  //     } else {
-  //       alert(`Check-in failed: ${err.response?.data?.message || err.message}`);
-  //     }
-
-  //   }
-
-  // };
   const handleCheckIn = async () => {
 
     try {
 
-      // Check if user data exists
       if (!user || !user.data || !user.data._id) {
-        alert('User data not found. Please login again.');
+        toast.warn('User data not found. Please login again.');
         return;
       }
 
-      // Check if location data exists
       if (!location || !location.latitude || !location.longitude) {
-        alert('Location data not available. Please enable location services.');
+        toast.warn('Location data not available. Please enable location services.');
         return;
       }
 
@@ -262,35 +185,23 @@ function Dashboard() {
 
       console.log('Check-in response:', response);
 
-      alert("Check-In Successful");
+      toast.success("Check-In Successful");
 
       setImage(null);
       setCheckInPopup(false);
 
     } catch (err) {
-
-      console.error('Check-in error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        statusText: err.response?.statusText
-      });
-
-      // Handle specific upload errors
       if (err.response?.data?.message?.includes('ENOENT') && err.response?.data?.message?.includes('uploads')) {
-        alert('Server upload directory issue. Please contact administrator to create uploads folder.');
+        toast.error('Server upload directory issue. Please contact administrator to create uploads folder.');
       } else if (err.response?.data?.message?.includes('ENOENT')) {
-        alert('File system error on server. Please contact administrator.');
+        toast.error('File system error on server. Please contact administrator.');
       } else {
-        alert(`Check-in failed: ${err.response?.data?.message || err.message}`);
+        toast.error(`Check-in failed: ${err.response?.data?.message || err.message}`);
       }
 
     }
 
   };
-
-
-
 
   const handleCheckOut = async () => {
 
@@ -310,21 +221,16 @@ function Dashboard() {
 
       console.log('Check-out response:', response.data);
 
-      alert("Check-Out Successful");
+      toast.success("Check-Out Successful");
 
       setImage(null);
       setCheckOutPopup(false);
 
     } catch (err) {
 
-      console.error('Check-out error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        statusText: err.response?.statusText
-      });
 
-      alert(`Check-out failed: ${err.response?.data?.message || err.message}`);
+
+      toast.error(`Check-out failed: ${err.response?.data?.message || err.message}`);
 
     }
 
@@ -332,135 +238,148 @@ function Dashboard() {
 
   const isNearShop = location && location.distance <= 100;
 
-  /* -------------------- UI -------------------- */
+  /* --------------------------------------- */
 
 
   return (
 
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
 
-      {location && (
+      <div className="bg-white shadow-xl rounded-2xl w-full max-w-md p-6 space-y-6">
 
-        <div className="p-6 bg-white shadow rounded">
-          <h2 className="font-bold">Your Location</h2>
+        <h1 className="text-2xl font-bold text-center text-gray-800">
+          Attendance Dashboard
+        </h1>
 
-          <p>Latitude : {location.latitude}</p>
-          <p>Longitude : {location.longitude}</p>
+        {/* Location Card */}
+        {location && (
+          <div className="bg-gray-50 rounded-xl p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">
+              📍 Your Location
+            </h2>
+            <p className="text-sm text-gray-600">Lat: {location.latitude}</p>
+            <p className="text-sm text-gray-600">Lng: {location.longitude}</p>
+          </div>
+        )}
 
+        {/* Distance Card */}
+        {location && (
+          <div className="bg-gray-50 rounded-xl p-4 shadow-sm text-center">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">
+              📏 Distance
+            </h2>
+            <p className="text-2xl font-bold text-red-500">
+              {location.distance.toFixed(0)} m
+            </p>
 
-        </div>
+            <p className={`mt-2 text-sm font-semibold ${isNearShop ? "text-green-600" : "text-red-500"
+              }`}>
+              {isNearShop ? "✅ Within Range" : "❌ Outside Range"}
+            </p>
+          </div>
+        )}
 
+        {/* Warning */}
+        {!isNearShop && (
+          <div className="bg-red-100 text-red-600 text-sm p-3 rounded-lg text-center">
+            You must be within 100 meters to mark attendance
+          </div>
+        )}
 
-      )}
-      {location && (
+        {/* Buttons */}
+        {isNearShop && (
+          <div className="flex gap-4">
+            <button
+              onClick={() => setCheckInPopup(true)}
+              className="flex-1 bg-green-600 hover:bg-green-700 transition text-white py-2 rounded-lg font-semibold"
+            >
+              Check In
+            </button>
 
-        <div className="p-6 bg-white shadow rounded">
-          <h2 className="font-bold">Distance from Shop</h2>
+            <button
+              onClick={() => setCheckOutPopup(true)}
+              className="flex-1 bg-yellow-500 hover:bg-yellow-600 transition text-white py-2 rounded-lg font-semibold"
+            >
+              Check Out
+            </button>
+          </div>
+        )}
+      </div>
 
-
-          <p className="text-red-500 text-sm font-bold"> {location.distance.toFixed(0)} m</p>
-
-        </div>
-
-
-      )}
-
-      {!isNearShop && (
-        <p className="bg-red-200 px-4 py-2 rounded">
-          You must be within 100 meters
-        </p>
-      )}
-
-      {isNearShop && (
-
-        <div className="flex gap-4">
-
-          <button
-            onClick={() => setCheckInPopup(true)}
-            className="bg-green-600 text-white px-6 py-2 rounded cursor-pointer"
-          >
-            Check In
-          </button>
-
-          <button
-            onClick={() => setCheckOutPopup(true)}
-            className="bg-yellow-600 text-white px-6 py-2 rounded cursor-pointer"
-          >
-            Check Out
-          </button>
-
-        </div>
-
-      )}
-
+      {/* Modal */}
       {(checkInPopup || checkOutPopup) && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+          <div className="bg-white w-full max-w-sm p-5 rounded-2xl shadow-lg space-y-4">
 
-          <div className="bg-white p-6 rounded w-96">
+            <h2 className="text-lg font-semibold text-center">
+              {checkInPopup ? "Check In" : "Check Out"}
+            </h2>
 
+            {/* Start Camera */}
             {!cameraActive && !image && (
               <>
                 <button
                   onClick={startCamera}
-                  className="w-full bg-green-600 text-white py-2 rounded cursor-pointer"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
                 >
-                  Take Image
+                  📸 Open Camera
                 </button>
-                <button className="bg-gray-600 text-white px-6 py-2 mt-5 rounded cursor-pointer" onClick={() => { setCheckInPopup(false), setCheckOutPopup(false) }}> Back</button>
-              </>
 
+                <button
+                  onClick={() => {
+                    setCheckInPopup(false);
+                    setCheckOutPopup(false);
+                  }}
+                  className="w-full bg-gray-400 text-white py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </>
             )}
 
+            {/* Camera View */}
             {cameraActive && (
-
-              <div>
-
+              <>
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-48 bg-black rounded"
+                  className="w-full h-48 bg-black rounded-lg"
                 />
 
-                <div className="flex gap-2 mt-2">
-
+                <div className="flex gap-2">
                   <button
                     onClick={capturePhoto}
-                    className="flex-1 bg-blue-600 text-white py-2 rounded"
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg"
                   >
                     Capture
                   </button>
 
                   <button
                     onClick={stopCamera}
-                    className="flex-1 bg-red-600 text-white py-2 rounded"
+                    className="flex-1 bg-red-600 text-white py-2 rounded-lg"
                   >
                     Cancel
                   </button>
-
                 </div>
-
-              </div>
-
+              </>
             )}
 
+            {/* Preview */}
             {image && (
-
-              <div>
-
+              <>
                 <img
                   src={URL.createObjectURL(image)}
-                  alt="captured"
-                  className="w-full h-48 object-cover rounded"
+                  alt="preview"
+                  className="w-full h-48 object-cover rounded-lg"
                 />
 
-                <div className="flex gap-2 mt-3">
-
+                <div className="flex gap-2">
                   <button
                     onClick={() => setImage(null)}
-                    className="flex-1 bg-gray-400 text-white py-2 rounded"
+                    className="flex-1 bg-gray-400 text-white py-2 rounded-lg"
                   >
                     Retake
                   </button>
@@ -469,25 +388,19 @@ function Dashboard() {
                     onClick={
                       checkInPopup ? handleCheckIn : handleCheckOut
                     }
-                    className="flex-1 bg-green-600 text-white py-2 rounded"
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg"
                   >
                     Submit
                   </button>
-
                 </div>
-
-              </div>
-
+              </>
             )}
 
             <canvas ref={canvasRef} className="hidden"></canvas>
 
           </div>
-
         </div>
-
       )}
-
     </div>
 
   );

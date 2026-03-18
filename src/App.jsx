@@ -8,10 +8,12 @@ import RegisterUser from "./Pages/RegisterUser";
 import Dashboard from "./Pages/Dashboard";
 import AttendacneHistory from "./Pages/AttendanceHistory";
 import PrivateRoute from "./components/routes/routes";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
 
         <Route path="/login-user" element={<LoginUser />} />

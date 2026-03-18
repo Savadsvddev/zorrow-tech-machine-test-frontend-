@@ -33,9 +33,6 @@ axiosInstance.interceptors.response.use(
       // Clear local storage
       localStorage.removeItem("data");
 
-      // Optionally clear other user data
-      
-
       // Redirect to login page (adjust path as needed)
       window.location.href = "/login-user";
     }
